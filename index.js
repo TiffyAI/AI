@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const OPENAI_KEY = "sk-..."; // Replace with your actual key or use environment variable
+const OPENAI_KEY = "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"; // Replace with your actual key or use environment variable
 
 app.post("/ask", async (req, res) => {
   try {
