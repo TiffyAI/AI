@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TiffyAI Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #001f3f, #003366);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { color: #00ccff; }
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      margin: 10px;
+      background: linear-gradient(45deg, #00ccff, #00ffcc);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    input {
+      padding: 10px;
+      width: 80%;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    #chat, #leaderboard, #dashboard {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    #price { font-size: 1.3rem; color: #00ffcc; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to TiffyAI Assistant</h1>
+  <div id="price">Loading TiffyAI price...</div>
+
+  <button onclick="connectWallet()">Connect Wallet</button>
+  <div id="walletAddress">Wallet not connected</div>
+
+  <div id="chat">
+    <h2>Ask TiffyAI</h2>
+    <input type="text" id="userInput" placeholder="Ask something..." />
+    <button onclick="askAI()">Send</button>
+    <div id="aiResponse">Waiting for your question...</div>
+  </div>
+
+  <div id="dashboard">
+    <h2>Game Dashboard</h2>
+    <p>Energy: 80%</p>
+    <p>XP: 1450</p>
+    <p>Stamina: 7/10</p>
+  </div>
+
+  <div id="leaderboard">
+    <h2>Top Miners</h2>
+    <ol>
+      <li>@CryptoKing - 1.00 TiffyAI</li>
+      <li>@LunaQueen - 0.87 TiffyAI</li>
+      <li>@PixelMiner - 0.74 TiffyAI</li>
+    </ol>
+  </div>
+
+  <script>
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          document.getElementById("walletAddress").innerText = `Connected: ${accounts[0]}`;
+          window.web3 = new Web3(window.ethereum);
+        } catch (err) {
+          alert("Wallet connection failed.");
+        }
+      } else {
+        alert("No Web3 wallet found. Use MetaMask or Trust Wallet.");
+      }
+    }
+
+    async function askAI() {
+      const question = document.getElementById("userInput").value;
+      const aiBox = document.getElementById("aiResponse");
+      aiBox.innerHTML = "Thinking...";
+
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer YOUR_OPENAI_API_KEY"
+        },
+        body: JSON.stringify({
+          model: "gpt-4",
+          messages: [{ role: "user", content: question }]
+        })
+      });
+
+      const data = await res.json();
+      const reply = data?.choices?.[0]?.message?.content;
+      aiBox.innerHTML = reply || "No response.";
+    }
+
+    async function fetchPrice() {
+      try {
+        const res = await fetch("https://api.dexscreener.com/latest/dex/pairs/bsc/0xa35641960651874F6b42f2ba4F77f717BA823229");
+        const data = await res.json();
+        const price = data?.pair?.priceUsd;
+        document.getElementById("price").innerText = price ? `Live Price: $${parseFloat(price).toFixed(6)} USD` : "Price unavailable";
+      } catch {
+        document.getElementById("price").innerText = "Failed to fetch price";
+      }
+    }
+
+    fetchPrice();
+    setInterval(fetchPrice, 15000);
+  </script>
+</body>
+</html>
