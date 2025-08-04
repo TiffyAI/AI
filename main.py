@@ -1,103 +1,96 @@
 import os
 import logging
+import requests
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import requests
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-load_dotenv()
+load_dotenv()  # Load .env variables
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+BSCSCAN_API_KEY = os.getenv("BSCSCAN_API_KEY")
+
+# Contract & token info
+TOKEN_CONTRACT = "0xYourTokenAddressHere"
+PRICE_API_URL = "https://tiffyai.github.io/TIFFY-Market-Value/price.json"
+PORTAL_LINK = "https://t.me/TiffyAI_Bot?start=portal"
 
 logging.basicConfig(level=logging.INFO)
 
-# === COMMAND HANDLERS ===
+# --- COMMAND HANDLERS ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👁️ Welcome, Explorer.\n\nYou’ve just unlocked the 🔵 **Blue Key** to TiffyAI.\n\n"
-        "🚀 Claim your first $TIFFY every 10 minutes:\n👉 https://tiffyai.github.io/Start/\n\n"
-        "🎯 TiffyAI isn’t just a token. It’s a movement.\n\nUse /help to explore everything she can do.",
-        parse_mode="Markdown"
-    )
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "**TiffyAI Bot Commands:**\n"
-        "/start — Unlock Blue Key\n"
-        "/claim — Stamp Portal\n"
-        "/wallet — Launch Wallet\n"
-        "/trade — PancakeSwap + Stats\n"
-        "/price — Live $TIFFY Price\n"
-        "/stake — Rewards from Contract\n"
-        "/ai — Ask TiffyAI Anything\n",
+        "🔵 Welcome to *TiffyAI*.\n\nYour Blue Key awaits.\n\n🎯 Every 10 minutes is a chance to claim, win, or unlock something powerful.\n\nUse /claim to begin.",
         parse_mode="Markdown"
     )
 
 async def claim(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🔓 Enter the Portal & Claim:\nhttps://tiffyai.github.io/Start/")
+    await update.message.reply_text(f"🚪 Tap to enter the portal:\n{PORTAL_LINK}")
 
 async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🔐 Launch TiffyAI in your wallet:\n\n"
-        "🦊 MetaMask: https://metamask.app.link/dapp/tiffyai.github.io/Start/\n"
-        "📲 Trust Wallet: https://link.trustwallet.com/open_url?coin_id=60&url=https%3A%2F%2Ftiffyai.github.io%2FStart%2F\n"
-        "🌐 OKX Wallet: okx://wallet/dapp/details?dappUrl=https%3A%2F%2Ftiffyai.github.io%2FStart%2F"
+        "💼 Choose your wallet:\n\n🔗 MetaMask: Paste link in Discover\n🔗 TrustWallet: Open with DApp browser\n🔗 OKX: Use DApp scanner"
     )
 
 async def trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📈 Trade $TIFFY & check analytics:\n\n"
-        "🛒 PancakeSwap: https://pancakeswap.finance/swap?outputCurrency=0x...\n"
-        "📊 BscScan: https://bscscan.com/token/0x...\n"
-        "🧠 Sourcify Verified: https://sourcify.dev/#/lookup/0x...\n"
-        "🏦 Treasury-linked. Burn-enabled. Purpose-coded."
+        "📊 Token Stats & Trade Info:\n\n📍 Contract: `0xYourTokenAddressHere`\n\n📈 Trade: https://pancakeswap.finance/swap\n\n🔁 Slippage: ~2-5%\n\nUse /price to check current value.",
+        parse_mode="Markdown"
     )
 
 async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        url = "https://tiffyai.github.io/TIFFY-Market-Value/price.json"
-        response = requests.get(url, timeout=5)
-        data = response.json()
-
-        price = float(data['tiffyToUSD'])
-        updated = data['lastUpdated']
-
-        await update.message.reply_text(
-            f"💎 $TIFFY is now **${price:.2f}**\n🕓 Updated: `{updated}`",
-            parse_mode="Markdown"
-        )
+        r = requests.get(PRICE_API_URL)
+        data = r.json()
+        price = float(data.get("tiffyToUSD", 0))
+        await update.message.reply_text(f"💎 Current $TIFFY: *${price:.4f}*", parse_mode="Markdown")
     except Exception as e:
-        await update.message.reply_text("⚠️ Couldn't fetch price data.")
+        await update.message.reply_text("⚠️ Couldn't fetch price.")
         print("Price fetch error:", e)
 
-async def stake(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "⛏️ Staking Vault Active\n\n"
-        "Earn daily rewards from TiffyAI staking pool.\n"
-        "📜 Contract: Auto-burns. Treasury-fueled. Deflationary.\n"
-        "📍 Stake Now: https://tiffyai.github.io/Staking/"
+async def leaderboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url = (
+        f"https://api.bscscan.com/api?module=token&action=tokenholderlist"
+        f"&contractaddress={TOKEN_CONTRACT}&page=1&offset=5&apikey={BSCSCAN_API_KEY}"
     )
+    try:
+        r = requests.get(url)
+        holders = r.json().get("result", [])
+
+        if not holders:
+            raise Exception("Empty result")
+
+        msg = "🏆 *Top $TIFFY Holders:*\n\n"
+        for h in holders:
+            addr = h["TokenHolderAddress"]
+            bal = int(h["TokenHolderQuantity"]) / 10**18
+            msg += f"`{addr[:6]}...{addr[-4:]}` — {bal:.2f} $TIFFY\n"
+
+        await update.message.reply_text(msg, parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text("⚠️ Leaderboard unavailable.")
+        print("Leaderboard error:", e)
 
 async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👁️ TiffyAI is syncing...\n(Coming soon: talk to the mind behind the chain.)")
+    await update.message.reply_text("🤖 AI is listening... (Coming soon 🔗)")
 
-async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("💭 TiffyAI is listening... Ask anything.")
+# --- MAIN APP ---
 
-# === MAIN APP ===
-
-if __name__ == "__main__":
+def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("claim", claim))
     app.add_handler(CommandHandler("wallet", wallet))
     app.add_handler(CommandHandler("trade", trade))
     app.add_handler(CommandHandler("price", price))
-    app.add_handler(CommandHandler("stake", stake))
+    app.add_handler(CommandHandler("leaderboard", leaderboard))
     app.add_handler(CommandHandler("ai", ai))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback))
 
-    print("🤖 TiffyAI is awake.")
+    print("🤖 TiffyAI Bot is online.")
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
