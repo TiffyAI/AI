@@ -36,7 +36,7 @@ async def wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📊 Token Stats & Trade Info:\n\n📍 Contract: `0xYourTokenAddressHere`\n\n📈 Trade: https://pancakeswap.finance/swap\n\n🔁 Slippage: ~2-5%\n\nUse /price to check current value.",
+        "📊 Token Stats & Trade Info:\n\n📍 Contract: `0xE488253DD6B4D31431142F1b7601C96f24Fb7dd5`\n\n📈 Trade: https://pancakeswap.finance/swap\n\n🔁 Slippage: ~2-5%\n\nUse /price to check current value.",
         parse_mode="Markdown"
     )
 
